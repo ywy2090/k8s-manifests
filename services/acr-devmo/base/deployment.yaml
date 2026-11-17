@@ -1,0 +1,79 @@
+# acr-devmo Deployment（占位符 ${IMAGE} 由流水线在 apply 前渲染）
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acr-devmo
+  namespace: bge-test
+  labels:
+    app: acr-devmo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: acr-devmo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0        # 滚动期间服务不中断
+  template:
+    metadata:
+      labels:
+        app: acr-devmo
+    spec:
+      serviceAccountName: acr-devmo-sa   # aliyun-acr-credential-helper 免密拉取的前提
+      topologySpreadConstraints:         # 副本分散到不同节点
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: acr-devmo
+      containers:
+        - name: acr-devmo
+          image: dev-acr-registry-vpc.cn-hongkong.cr.aliyuncs.com/dev/acr-devmo:v2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          startupProbe:                # 慢启动保护
+            httpGet:
+              path: /
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:              # 不健康不接流量
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 10
+          livenessProbe:               # 挂了自动重启
+            httpGet:
+              path: /
+              port: 8080
+            periodSeconds: 20
+          lifecycle:
+            preStop:                   # 优雅退出
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          securityContext:
+            runAsNonRoot: false        # busybox httpd 需 root 绑定配置；java 服务改 true + runAsUser
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acr-devmo
+  namespace: bge-test
+spec:
+  type: ClusterIP                      # demo 期集群内访问；对外改 Ingress/ALB
+  selector:
+    app: acr-devmo
+  ports:
+    - port: 80
+      targetPort: 8080
