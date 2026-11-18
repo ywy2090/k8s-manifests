@@ -31,7 +31,7 @@ spec:
               app: acr-devmo
       containers:
         - name: acr-devmo
-          image: dev-acr-registry-vpc.cn-hongkong.cr.aliyuncs.com/dev/acr-devmo:v2
+          image: dev-acr-registry.cn-hongkong.cr.aliyuncs.com/dev/acr-devmo:v2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
