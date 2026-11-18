@@ -7,4 +7,4 @@ resources:
 # 镜像 tag：由 Jenkins 流水线在每次构建后更新（Kustomize images 语法）
 images:
   - name: dev-acr-registry-vpc.cn-hongkong.cr.aliyuncs.com/dev/acr-devmo
-    newTag: v5
+    newTag: v13
